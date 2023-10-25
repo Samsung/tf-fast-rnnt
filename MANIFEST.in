@@ -1,0 +1,7 @@
+include requirements.txt
+include README.md
+include LICENSE*
+include CMakeLists.txt
+recursive-include fast_rnnt *.*
+recursive-include cmake *.*
+global-exclude *.pyc
