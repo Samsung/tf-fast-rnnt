@@ -6,8 +6,10 @@ execute_process(COMMAND python3 -c "import tensorflow as tf; print(' '.join(tf.s
 
 execute_process(COMMAND python3 -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_link_flags()), end='')" OUTPUT_VARIABLE Tensorflow_LINK_FLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
 
+execute_process(COMMAND python3 -c "import tensorflow as tf; print(' '.join(tf.__version__), end='')" OUTPUT_VARIABLE Tensorflow_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+
 # set the global CMAKE_CXX_FLAGS so that
-# optimized_transducer uses the same abi flag as PyTorch
+# optimized_transducer uses the same abi flag as tensorflow
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${Tensorflow_COMPILE_FLAGS}")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${Tensorflow_COMPILE_FLAGS}")
 set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-as-needed ${Tensorflow_LINK_FLAGS} ${CMAKE_SHARED_LINKER_FLAGS}")

@@ -24,7 +24,6 @@ import tensorflow as tf
 import tf_fast_rnnt
 
 from typing import Optional, Tuple, Union
-#from .mutual_information import mutual_information_recursion
 
 @tf.function
 def fix_for_boundary(px: tf.Tensor, boundary: Optional[tf.Tensor] = None) -> tf.Tensor:
@@ -60,27 +59,6 @@ def fix_for_boundary(px: tf.Tensor, boundary: Optional[tf.Tensor] = None) -> tf.
     updates = tf.broadcast_to(float("-inf"), [B, S])
     px = tf.tensor_scatter_nd_update(px, indices, updates)
     return px
-
-@tf.function
-def __torch_gather(x, gather_axis, indices):
-    shape = tf.shape(indices, out_type=tf.int64)
-    num_elements = 1
-    for i in range(len(shape)):
-        num_elements *= shape[i]
-    all_indices = tf.cast(tf.where(tf.fill(shape, True)), tf.int64)
-    gather_locations = tf.reshape(indices, [num_elements])
-
-    gather_indices = []
-    for axis in range(len(shape)):
-        if axis == gather_axis:
-            gather_indices.append(gather_locations)
-        else:
-            gather_indices.append(all_indices[:, axis])
-
-    gather_indices = tf.stack(gather_indices, axis=-1)
-    gathered = tf.gather_nd(x, gather_indices)
-    reshaped = tf.reshape(gathered, shape)
-    return reshaped
 
 @tf.function
 def get_rnnt_logprobs(
@@ -200,8 +178,7 @@ def get_rnnt_logprobs(
     lm_probs = tf.math.exp(lm - lm_max)
     # normalizers: [B][S+1][T]
     normalizers = tf.math.log(
-        tf.matmul(lm_probs, tf.transpose(am_probs, perm=[0, 2, 1]))
-        + tf.math.nextafter(0., 1.)
+        tf.matmul(lm_probs, am_probs, transpose_b=True) + tf.math.nextafter(0., 1.)
     )
 
     # add lm_max and am_max to normalizers, to make it as if we had not
@@ -1289,34 +1266,30 @@ def get_rnnt_logprobs_smoothed(
 
     # subtracting am_max and lm_max is to ensure the probs are in a good range
     # to do exp() without causing underflow or overflow.
-    am_max, _ = tf.math.reduce_max(am, axis=2, keepdims=True)  # am_max: [B][T][1]
-    lm_max, _ = tf.math.reduce_max(lm, axis=2, keepdims=True)  # lm_max: [B][S+1][1]
-    am_probs = (am - am_max).exp()  # [B][T][C]
-    lm_probs = (lm - lm_max).exp()  # [B][S+1][C]
+    am_max = tf.math.reduce_max(am, axis=2, keepdims=True)  # am_max: [B][T][1]
+    lm_max = tf.math.reduce_max(lm, axis=2, keepdims=True)  # lm_max: [B][S+1][1]
+    am_probs = tf.math.exp(am - am_max)
+    lm_probs = tf.math.exp(lm - lm_max)
     # normalizers: [B][S+1][T]
     normalizers = tf.math.log(
-        tf.matmul(lm_probs, tf.transpose(am_probs, perm=[0, 2, 1]))
-        + tf.math.nextafter(0., 1.)
+        tf.matmul(lm_probs, am_probs, transpose_b=True) + tf.math.nextafter(0., 1.)
     )
 
     # normalizer per frame, if we take only the LM probs by themselves
-    lmonly_normalizers = lm_probs.sum(
+    lmonly_normalizers = tf.math.reduce_sum(lm_probs, 
         axis=2, keepdims=True
     )  # lmonly_normalizers: [B][S+1][1]
-    unigram_lm = (
-        torch.mean(lm_probs / lmonly_normalizers, axis=(0, 1), keepdims=True)
-        + torch.finfo(lm_probs.dtype).tiny
-    )  # [1][1][C]
+    unigram_lm = tf.math.reduce_mean(lm_probs / lmonly_normalizers,
+        axis=(0, 1), keepdims=True) + tf.math.nextafter(0., 1.)  # [1][1][C]
     amonly_normalizers = (
-        tf.reshape(torch.mv(tf.reshape(am_probs, [-1, C]), tf.reshape(unigram_lm, [C]))
-        , [B, T, 1])
-        .log()
+        tf.math.log(tf.reshape(tf.linalg.matvec(tf.reshape(am_probs, [-1, C]), tf.reshape(unigram_lm, [C]))
+        , [B, T, 1]))
         + am_max
     )  # [B][T][1]
     amonly_normalizers = tf.transpose(amonly_normalizers, perm=[0, 2, 1])  # [B][1][T]
-    unigram_lm = unigram_lm.log()
+    unigram_lm = tf.math.log(unigram_lm)
     lmonly_normalizers = (
-        lmonly_normalizers.log() + lm_max
+        tf.math.log(lmonly_normalizers) + lm_max
     )  # [B][S+1][1], log-normalizer, used for LM-only part of prob.
 
     # add lm_max and am_max to normalizers, to make it as if we had not
@@ -1324,10 +1297,12 @@ def get_rnnt_logprobs_smoothed(
     normalizers = normalizers + lm_max + tf.transpose(am_max, perm=[0, 2, 1])  # [B][S+1][T]
 
     # px is the probs of the actual symbols (not yet normalized)..
-    px_am = torch_gather(tf.transpose(am, perm=[0, 2, 1]), 
-                        1, 
-                        tf.broadcast_to(tf.expand_dims(symbols, 2), (B, S, T)))
-
+    index = tf.reshape(symbols, [B, S, 1])
+    # px is the probs of the actual symbols..
+    px_am = tf.gather_nd(tf.transpose(am, perm=[0, 2, 1]),  # (B, C, T)
+                        index,
+                        batch_dims=1
+                        )
     if rnnt_type == "regular":
         px_am = tf.concat(
             (
@@ -1339,21 +1314,23 @@ def get_rnnt_logprobs_smoothed(
             ),
             axis=2,
         )  # now: [B][S][T+1], index [:,:,T] has -inf..
+    px_lm = tf.expand_dims(tf.gather_nd(
+        lm[:, :S], tf.expand_dims(symbols, -1),
+        batch_dims=2
+    ), -1)
 
-    px_lm = torch_gather(
-        lm[:, :S], 2, tf.expand_dims(symbols, -1)
-    )  # [B][S][1]
-    px_lm_unigram = torch_gather(
-        tf.broadcast_to(unigram_lm, [B, S, C]), 2, tf.expand_dims(symbols, -1)
+    px_lm_unigram = tf.gather(tf.reshape(unigram_lm, [-1]),
+        tf.expand_dims(symbols, -1)
     )  # [B][S][1]
 
     px = px_am + px_lm  # [B][S][T+1] if not modified, [B][S][T] if modified
-    px[:, :, :T] -= normalizers[:, :S, :]  # px: [B][S][T+1] or [B][S][T]
+    px -= tf.concat([normalizers, tf.zeros([B,S+1,1], dtype=tf.float32)], axis=2)[:, :S, :]
 
     px_amonly = (
         px_am + px_lm_unigram
     )  # [B][S][T+1] if !modified; [B][S][T] if modified.
-    px_amonly[:, :, :T] -= amonly_normalizers
+
+    px_amonly -= tf.concat([amonly_normalizers, tf.zeros([B,1,1], dtype=tf.float32)], axis=2)
     px_lmonly = px_lm - lmonly_normalizers[:, :S, :]
 
     # py is the probs of termination symbols, of shape [B][S+1][T]
@@ -1503,16 +1480,16 @@ def rnnt_loss_smoothed(
         penalty = penalty * delay_penalty
         px += tf.cast(penalty, px.dtype)
 
-    scores_and_grads = mutual_information_recursion(
+    scores_and_grads = tf_fast_rnnt.mutual_information_recursion(
         px=px, py=py, boundary=boundary, return_grad=return_grad
     )
     negated_loss = scores_and_grads[0] if return_grad else scores_and_grads
     if reduction == "none":
         loss = -negated_loss
     elif reduction == "mean":
-        loss = -torch.mean(negated_loss)
+        loss = -tf.reduce_mean(negated_loss)
     elif reduction == "sum":
-        loss = -torch.sum(negated_loss)
+        loss = -tf.reduce_sum(negated_loss)
     else:
         raise ValueError(
             f"reduction should be ('none' | 'mean' | 'sum'), given {reduction}"

@@ -9,14 +9,20 @@ to build this project"
   )
 endif()
 
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+if(Tensorflow_VERSION GREATER_EQUAL "2.13.0")
+  # saddly, cmake 3.17 and above is required to supprot tf 2.13
+  cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ version to be used.")
+else()  
+  cmake_minimum_required(VERSION 3.7 FATAL_ERROR)
+  set(CMAKE_CXX_STANDARD 14 CACHE STRING "The C++ version to be used.")
+endif()
 
 set(CMAKE_DISABLE_FIND_PACKAGE_MKL TRUE)
 set(languages CXX)
 set(_FT_WITH_CUDA ON)
 
 # the following settings are modified from cub/CMakeLists.txt
-set(CMAKE_CXX_STANDARD 14 CACHE STRING "The C++ version to be used.")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -37,7 +43,9 @@ if(APPLE OR (DEFINED FT_WITH_CUDA AND NOT FT_WITH_CUDA))
 endif()
 
 if(_FT_WITH_CUDA)
-  set(languages ${languages} CUDA)
+  set(CMAKE_CUDA_STANDARD 14)
+  set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+  set(languages CUDA ${languages})
   if(NOT DEFINED FT_WITH_CUDA)
     set(FT_WITH_CUDA ON)
   endif()
