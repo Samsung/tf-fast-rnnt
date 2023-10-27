@@ -9,8 +9,8 @@ to build this project"
   )
 endif()
 
-if(Tensorflow_VERSION GREATER_EQUAL "2.13.0")
-  # sadly, cmake 3.17 and above is required to supprot tf 2.13
+if(Tensorflow_VERSION GREATER_EQUAL "2.10.0")
+  # sadly, cmake 3.17 and above is required to supprot tf 2.10
   cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ version to be used.")
 else()  
