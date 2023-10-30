@@ -803,14 +803,15 @@ def do_rnnt_pruning(
 
     # (B, T, s_range, C)
     am_pruning = tf.broadcast_to(tf.expand_dims(am, 2), [B, T, s_range, C])
-
+    ranges = tf.reshape(ranges, [B, T*s_range])
     # (B, T, s_range, C)
-    lm_pruning = tf.gather_nd(
-         tf.tile(lm[:, tf.newaxis, tf.newaxis, :, :], [1, T, s_range, 1, 1]),
-        ranges[:, :, :, tf.newaxis],
-        batch_dims=3
+    lm_pruning = tf.gather(
+        lm,
+        ranges,
+        batch_dims=1,
+        axis=1
     )
-
+    lm_pruning = tf.reshape(lm_pruning, [B, T, s_range, C])
     return am_pruning, lm_pruning
 
 @tf.function
