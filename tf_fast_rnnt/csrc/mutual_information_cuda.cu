@@ -151,12 +151,12 @@ namespace tf_fast_rnnt {
 
              treating values with any -1 index as -infinity.
               .. if `boundary` is set, we start from p[b,s_begin,t_begin]=0.0.
-   boundary:  If set, a tensor of shape [B][4] of type int64_t, which
+   boundary:  If set, a tensor of shape [B][4] of type int32_t, which
               contains, where for each batch element b, boundary[b] equals
               [s_begin, t_begin, s_end, t_end]
               which are the beginning and end (i.e. one-past-the-last) of the
               x and y sequences that we should process.  Otherwise, must be
-              a tensor of shape [0][0] of type int64_t; the values will
+              a tensor of shape [0][0] of type int32_t; the values will
               default to (0, 0, S, T).
      ans: a tensor `ans` of shape [B], where this function will set
             ans(b) = p[b][s_end][t_end],
@@ -180,7 +180,7 @@ __global__ void mutual_information_kernel(
     // B, S + 1, T + 1.  This is an output.
     typename tf::TTypes<scalar_t, 3>::Tensor p,
     // B, 4;  or 0, 0 if boundaries are the defaults (0, 0, S, T)
-    typename tf::TTypes<int64_t>::ConstMatrix boundary,
+    typename tf::TTypes<int32_t>::ConstMatrix boundary,
     typename tf::TTypes<scalar_t>::Vec ans, // [B]
     int iter) { // This kernel is sequentially called with 'iter' = 0, 1, 2 and
                 // so on, up to num_iters - 1 where num_iters = num_s_blocks +
@@ -229,7 +229,7 @@ __global__ void mutual_information_kernel(
 
   // boundary_buf will be used to store the b'th row of `boundary` if we have
   // boundary information supplied; or (0, 0, S, T) otherwise.
-  __shared__ int64_t boundary_buf[4];
+  __shared__ int32_t boundary_buf[4];
 
   if (threadIdx.x == 0) {
     boundary_buf[0] = 0;
@@ -501,7 +501,7 @@ __global__ void mutual_information_backward_kernel(
     typename tf::TTypes<scalar_t, 3>::Tensor px_grad, // B, S, T + 1.
     typename tf::TTypes<scalar_t, 3>::Tensor py_grad, // B, S + 1, T.
     // B, 4;  or 0, 0 if boundaries are the defaults (0, 0, S, T)
-    typename tf::TTypes<int64_t>::ConstMatrix boundary,
+    typename tf::TTypes<int32_t>::ConstMatrix boundary,
     int iter, // This kernel is sequentially called with 'iter' = num_iters
               // - 1, num_iters - 2, .. 0, where num_iters can be taken to
               // be any sufficiently large number but will actually be:
@@ -556,7 +556,7 @@ __global__ void mutual_information_backward_kernel(
 
   // boundary_buf will be used to store the b'th row of `boundary` if we have
   // boundary information supplied; or (0, 0, S, T) if not.
-  __shared__ int64_t boundary_buf[4];
+  __shared__ int32_t boundary_buf[4];
 
   if (threadIdx.x == 0) {
     boundary_buf[0] = 0;
@@ -766,7 +766,7 @@ template <typename scalar_t>
 int MutualInformationCuda(
     typename tf::TTypes<scalar_t, 3>::ConstTensor& px, // [B][S][T+1] if !modified, [B][S][T] if modified.
     typename tf::TTypes<scalar_t, 3>::ConstTensor& py, // [B][S+1][T]
-    typename tf::TTypes<int64_t>::ConstMatrix& boundary, // [B][4], int.
+    typename tf::TTypes<int32_t>::ConstMatrix& boundary, // [B][4], int.
     typename tf::TTypes<scalar_t, 3>::Tensor& p, 
     typename tf::TTypes<scalar_t>::Vec& ans,           //  [B][S+1][T+1]; an output
     cudaStream_t stream) {                        
@@ -818,7 +818,7 @@ template <typename scalar_t>
 int MutualInformationBackwardCuda(
     typename tf::TTypes<scalar_t, 3>::ConstTensor& px, 
     typename tf::TTypes<scalar_t, 3>::ConstTensor& py, 
-    typename tf::TTypes<int64_t>::ConstMatrix& boundary,
+    typename tf::TTypes<int32_t>::ConstMatrix& boundary,
     typename tf::TTypes<scalar_t, 3>::Tensor& p, 
     typename tf::TTypes<scalar_t, 3>::Tensor& p_grad, 
     typename tf::TTypes<scalar_t, 3>::Tensor& px_grad, 
@@ -897,9 +897,9 @@ __global__ void tensor_kernel_scan_innermost_dim_with_indices(const scalar_t *se
                                                 int num_rows, int row_size,
                                                 scalar_t init, BinaryFunction binary_op) {
   __shared__ scalar_t vbuf[num_threads_y][2 * num_threads_x];
-  __shared__ int64_t ibuf[num_threads_y][2 * num_threads_x];
+  __shared__ int32_t ibuf[num_threads_y][2 * num_threads_x];
   scalar_t* row_buf = vbuf[threadIdx.y];
-  int64_t* row_idx_buf = ibuf[threadIdx.y];
+  int32_t* row_idx_buf = ibuf[threadIdx.y];
 
   for (int block_row = blockIdx.x * blockDim.y;
        block_row < num_rows;
@@ -908,7 +908,7 @@ __global__ void tensor_kernel_scan_innermost_dim_with_indices(const scalar_t *se
     const scalar_t *row_self = self_ + row * row_size;
     scalar_t *row_values = values_ + row * row_size;
     scalar_t block_total = init;
-    int64_t block_idx_final = 0;
+    int32_t block_idx_final = 0;
     // Perform scan on one block at a time, keeping track of the total value of
     // all blocks processed so far.
     for (int block_col = 0; block_col < row_size; block_col += 2 * num_threads_x) {
@@ -1015,14 +1015,14 @@ int CumminCuda(
 template int tf_fast_rnnt::MutualInformationCuda<float>(
     typename tf::TTypes<float, 3>::ConstTensor& px, // [B][S][T+1] if !modified, [B][S][T] if modified.
     typename tf::TTypes<float, 3>::ConstTensor& py, // [B][S+1][T]
-    typename tf::TTypes<int64_t>::ConstMatrix& boundary, // [B][4], int.
+    typename tf::TTypes<int32_t>::ConstMatrix& boundary, // [B][4], int.
     typename tf::TTypes<float, 3>::Tensor& p, 
     typename tf::TTypes<float>::Vec& ans,
     cudaStream_t stream);                        //  [B][S+1][T+1]; an output
 template int tf_fast_rnnt::MutualInformationBackwardCuda<float>(
     typename tf::TTypes<float, 3>::ConstTensor& px, 
     typename tf::TTypes<float, 3>::ConstTensor& py, 
-    typename tf::TTypes<int64_t>::ConstMatrix& boundary,
+    typename tf::TTypes<int32_t>::ConstMatrix& boundary,
     typename tf::TTypes<float, 3>::Tensor& p, 
     typename tf::TTypes<float, 3>::Tensor& p_grad, 
     typename tf::TTypes<float, 3>::Tensor& px_grad, 
@@ -1030,7 +1030,7 @@ template int tf_fast_rnnt::MutualInformationBackwardCuda<float>(
     typename tf::TTypes<float>::Vec& ans_grad, 
     bool overwrite_ans_grad,
     cudaStream_t stream);
-template int tf_fast_rnnt::CumminCuda<int64_t>(
-    typename tf::TTypes<int64_t>::ConstMatrix& in,
-    typename tf::TTypes<int64_t>::Matrix& out,
+template int tf_fast_rnnt::CumminCuda<int32_t>(
+    typename tf::TTypes<int32_t>::ConstMatrix& in,
+    typename tf::TTypes<int32_t>::Matrix& out,
     cudaStream_t stream);

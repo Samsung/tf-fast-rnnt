@@ -43,17 +43,17 @@ def fix_for_boundary(px: tf.Tensor, boundary: Optional[tf.Tensor] = None) -> tf.
     if boundary is None:
         return px
     
-    shape = tf.shape(px, out_type=tf.int64)
+    shape = tf.shape(px)
     B = shape[0]
     S = shape[1]
     T1 = shape[2]
 
-    bound = tf.cast(boundary[:, 3], tf.int64)
+    bound = boundary[:, 3]
     bound = bound[:, tf.newaxis]
     t = tf.broadcast_to(bound, [B, S])
     a, b = tf.meshgrid(
-      tf.range(B, dtype=tf.int64), 
-      tf.range(S, dtype=tf.int64),
+      tf.range(B), 
+      tf.range(S),
       indexing='ij')
     indices = tf.stack([a, b, t], axis=-1)
     updates = tf.broadcast_to(float("-inf"), [B, S])
@@ -160,11 +160,11 @@ def get_rnnt_logprobs(
     #assert lm.shape[0] == am.shape[0], (lm.shape[0], am.shape[0])
     #assert lm.shape[2] == am.shape[2], (lm.shape[2], am.shape[2])
 
-    shape = tf.shape(am, out_type=tf.int64)
+    shape = tf.shape(am)
     B = shape[0]
     T = shape[1]
     C = shape[2]
-    S = tf.shape(lm, out_type=tf.int64)[1] - 1
+    S = tf.shape(lm)[1] - 1
     #assert symbols.shape == (B, S), symbols.shape
     #assert S >= 1, S
     #assert T >= S, (T, S)
@@ -303,7 +303,7 @@ def rnnt_loss_simple(
     )
 
     if delay_penalty > 0.0:
-        shape = tf.shape(px, out_type=tf.int64)
+        shape = tf.shape(px)
         B = shape[0]
         S = shape[1]
         T0 = shape[2]
@@ -406,7 +406,7 @@ def get_rnnt_logprobs_joint(
       the probability of the termination symbol on the last frame.
     """
     #assert logits.ndim == 4, logits.ndim
-    shape = tf.shape(logits, out_type=tf.int64)
+    shape = tf.shape(logits)
     B = shape[0]
     T = shape[1]
     S1 = shape[2]
@@ -516,7 +516,7 @@ def rnnt_loss(
         rnnt_type=rnnt_type,
     )
     if delay_penalty > 0.0:
-        shape = tf.shape(px, out_type=tf.int64)
+        shape = tf.shape(px)
         B = shape[0]
         S = shape[1]
         T0 = shape[2]
@@ -586,7 +586,7 @@ def _monotonic_lower_bound(x: tf.Tensor) -> tf.Tensor:
 
 @tf.function
 def _adjust_pruning_lower_bound(
-    s_begin: tf.Tensor, s_range: tf.int64
+    s_begin: tf.Tensor, s_range: tf.int32
 ) -> tf.Tensor:
     """Adjust s_begin (pruning lower bounds) to make it satisfy the following
     constraints
@@ -621,24 +621,22 @@ def _adjust_pruning_lower_bound(
     back the `s_begin`.
     """
     # s_begin (B, T)
-    shape = tf.shape(s_begin, out_type=tf.int64)
+    shape = tf.shape(s_begin)
     B = shape[0]
     T = shape[1]
-
-    s_range = tf.cast(s_range, tf.int64)
 
     s_begin = _monotonic_lower_bound(s_begin)
     # do the magic transformation
     s_begin = -(
-        s_begin - (s_range - 1) * tf.range(0, T, dtype=tf.int64)
+        s_begin - (s_range - 1) * tf.range(0, T)
     )
     # make the transformed tensor to be non-decreasing
     s_begin = _monotonic_lower_bound(s_begin)
     # make start symbol to be zero.
-    s_begin = tf.clip_by_value(s_begin, clip_value_min=0, clip_value_max=tf.int64.max)
+    s_begin = tf.clip_by_value(s_begin, clip_value_min=0, clip_value_max=tf.int32.max)
     # do the magic transformation again to recover s_begin
     s_begin = -(
-        s_begin - (s_range - 1) * tf.range(0, T, dtype=tf.int64)
+        s_begin - (s_range - 1) * tf.range(0, T)
     )
     return s_begin
 
@@ -651,7 +649,7 @@ def get_rnnt_prune_ranges(
     px_grad: tf.Tensor,
     py_grad: tf.Tensor,
     boundary: tf.Tensor,
-    s_range: tf.int64,
+    s_range: tf.int32,
 ) -> tf.Tensor:
     """Get the pruning ranges of normal rnnt loss according to the grads
     of px and py returned by mutual_information_recursion.
@@ -694,12 +692,11 @@ def get_rnnt_prune_ranges(
       A tensor with the shape of (B, T, s_range) containing the indexes of the
       kept symbols for each frame.
     """
-    s_range = tf.cast(s_range, tf.int64)
-    shape = tf.shape(px_grad, out_type=tf.int64)
+    shape = tf.shape(px_grad)
     B = shape[0]
     S = shape[1]
     T1 = shape[2]
-    T = tf.shape(py_grad, out_type=tf.int64)[-1]
+    T = tf.shape(py_grad)[-1]
     #assert T1 in [T, T + 1], T1
     S1 = S + 1
     #assert py_grad.shape == (B, S + 1, T), py_grad.shape
@@ -729,7 +726,7 @@ def get_rnnt_prune_ranges(
     px_pad = tf.zeros((B, 1, T1), dtype=px_grad.dtype)
     px_grad_pad = tf.concat((px_pad, px_grad), axis=1)                        # (B, S1, T)
     final_grad = blk_sum_grad - px_grad_pad[:, : S1 - s_range + 1, :T]        # (B, S1 - s_range + 1, T)
-    s_begin = tf.math.argmax(final_grad, axis=1, output_type=tf.int64)        # (B, T)
+    s_begin = tf.math.argmax(final_grad, axis=1, output_type=tf.int32)        # (B, T)
 
     # Handle the values of s_begin in padding positions.
     # -1 here means we fill the position of the last frame (before padding) with
@@ -741,12 +738,12 @@ def get_rnnt_prune_ranges(
     # [[True, True, False, False, False, False],
     #  [True, True, True,  True,  False, False],
     #  [True, True, True,  True,  True,  False]]
-    mask = tf.cast(tf.broadcast_to(tf.reshape(tf.range(0, T, dtype=tf.int64), [1, T]), [B, T]), tf.int64)
+    mask = tf.broadcast_to(tf.reshape(tf.range(0, T), [1, T]), [B, T])
     mask = mask < tf.reshape(boundary[:, 3], [B, 1]) - 1
 
-    s_begin_padding = tf.reshape(boundary[:, 2], [B, 1]) - tf.cast(s_range, tf.int64) + 1
+    s_begin_padding = tf.reshape(boundary[:, 2], [B, 1]) - s_range + 1
     # handle the cases where `len(symbols) < s_range`
-    s_begin_padding = tf.clip_by_value(s_begin_padding, clip_value_min=0, clip_value_max=tf.int64.max)
+    s_begin_padding = tf.clip_by_value(s_begin_padding, clip_value_min=0, clip_value_max=tf.int32.max)
 
     s_begin = tf.where(mask, s_begin, s_begin_padding)
 
@@ -756,10 +753,10 @@ def get_rnnt_prune_ranges(
     # constrained rnnt) version of transducer, the third constraint becomes
     # `s_begin[i + 1] - s_begin[i] < 2`, because it only emits one symbol per
     # frame.
-    s_begin = _adjust_pruning_lower_bound(s_begin, tf.cast(2, tf.int64) if T1 == T else s_range)
+    s_begin = _adjust_pruning_lower_bound(s_begin, 2 if T1 == T else s_range)
 
     ranges = tf.broadcast_to(tf.reshape(s_begin, [B, T, 1]), [B, T, s_range]) + tf.range(
-        s_range, dtype=tf.int64)
+        s_range)
 
     return ranges
 
@@ -789,12 +786,12 @@ def do_rnnt_pruning(
     #assert ranges.shape[0] == am.shape[0], (ranges.shape[0], am.shape[0])
     #assert ranges.shape[0] == lm.shape[0], (ranges.shape[0], lm.shape[0])
     #assert am.shape[1] == ranges.shape[1], (am.shape[1], ranges.shape[1])
-    shape = tf.shape(ranges, out_type=tf.int64)
+    shape = tf.shape(ranges)
     B = shape[0]
     T = shape[1]
     s_range = shape[2]
 
-    shape = tf.shape(lm, out_type=tf.int64)
+    shape = tf.shape(lm)
     B = shape[0]
     S1 = shape[1]
     C = shape[2]
@@ -837,14 +834,14 @@ def _roll_by_shifts(src: tf.Tensor, shifts: tf.Tensor):
                [12, 13, 14, 10, 11]]])
     """
     #assert tf.rank(src) == 3, tf.rank(src)
-    shape = tf.shape(src, out_type=tf.int64)
+    shape = tf.shape(src)
     B = shape[0]
     T = shape[1]
     S = shape[2]
 
     #assert shifts.shape == (B, T), shifts.shape
 
-    index = tf.range(S, dtype=tf.int64)
+    index = tf.range(S)
     index = tf.reshape(index, [1, S])
     index = tf.tile(index, [T, 1])
     index = index[tf.newaxis,:]
@@ -927,14 +924,14 @@ def get_rnnt_logprobs_pruned(
     # symbols (B, S)
     # ranges (B, T, s_range)
     #assert logits.ndim == 4, logits.ndim
-    shape = tf.shape(logits, out_type=tf.int64)
+    shape = tf.shape(logits)
     B = shape[0]
     T = shape[1]
     s_range = shape[2]
     C = shape[3]
 
     #assert ranges.shape == (B, T, s_range), ranges.shape
-    shape = tf.shape(symbols, out_type=tf.int64)
+    shape = tf.shape(symbols)
     B = shape[0]
     S = shape[1]
 
@@ -943,7 +940,6 @@ def get_rnnt_logprobs_pruned(
     #assert rnnt_type in ["regular", "modified", "constrained"], rnnt_type
 
     normalizers = tf.math.reduce_logsumexp(logits, axis=3)
-    termination_symbol = tf.cast(termination_symbol, tf.int64)
     symbols_with_terminal = tf.concat(
         (
             symbols,
@@ -1099,7 +1095,7 @@ def rnnt_loss_pruned(
     )
  
     if delay_penalty > 0.0:
-        shape = tf.shape(px, out_type=tf.int64)
+        shape = tf.shape(px)
         B = shape[0]
         S = shape[1]
         T0 = shape[2]
@@ -1249,12 +1245,12 @@ def get_rnnt_logprobs_smoothed(
     #assert am.ndim == 3, am.ndim
     #assert lm.shape[0] == am.shape[0], (lm.shape[0], am.shape[0])
     #assert lm.shape[2] == am.shape[2], (lm.shape[2], am.shape[2])
-    shape = tf.shape(am, out_type=tf.int64)
+    shape = tf.shape(am)
     B = shape[0]
     T = shape[1]
     C = shape[2]
 
-    S = tf.shape(lm, out_type=tf.int64)[1] - 1
+    S = tf.shape(lm)[1] - 1
     #assert symbols.shape == (B, S), symbols.shape
     #assert S >= 1, S
     #assert T >= S, (T, S)
@@ -1463,7 +1459,7 @@ def rnnt_loss_smoothed(
     )
 
     if delay_penalty > 0.0:
-        shape = tf.shape(px, out_type=tf.int64)
+        shape = tf.shape(px)
         B = shape[0]
         S = shape[1]
         T0 = shape[2]

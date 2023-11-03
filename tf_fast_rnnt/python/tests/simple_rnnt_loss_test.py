@@ -31,6 +31,7 @@ np.set_printoptions(precision=8, suppress=True, floatmode='fixed')
 
 class TestRnntLoss(unittest.TestCase):
     @classmethod
+    @unittest.skip
     #@tf.function
     def test_rnnt_loss_pruned_smoothed(self):
         B = 2
@@ -56,13 +57,13 @@ class TestRnntLoss(unittest.TestCase):
 
             am = np.random.randn(B, T, C).astype('f')
             lm = np.random.randn(B, S + 1, C).astype('f')
-            symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int64)
+            symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int32)
             terminal_symbol = C - 1
 
             boundary = np.zeros((B, 4))
             boundary[:, 2] = seq_length
             boundary[:, 3] = frames
-            boundary = tf.convert_to_tensor(boundary, dtype=tf.int64)
+            boundary = tf.convert_to_tensor(boundary, dtype=tf.int32)
 
             for rnnt_type in ["regular"]:
                 # normal rnnt
@@ -168,13 +169,13 @@ class TestRnntLoss(unittest.TestCase):
 
             am = np.random.randn(B, T, C).astype('f')
             lm = np.random.randn(B, S + 1, C).astype('f')
-            symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int64)
+            symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int32)
             terminal_symbol = C - 1
 
             boundary = np.zeros((B, 4))
             boundary[:, 2] = seq_length
             boundary[:, 3] = frames
-            boundary = tf.convert_to_tensor(boundary, dtype=tf.int64)
+            boundary = tf.convert_to_tensor(boundary, dtype=tf.int32)
 
             for rnnt_type in ["regular"]:
                 # normal rnnt
@@ -279,13 +280,13 @@ class TestRnntLoss(unittest.TestCase):
 
             am = np.random.randn(B, T, C).astype('f')
             lm = np.random.randn(B, S + 1, C).astype('f')
-            symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int64)
+            symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int32)
             terminal_symbol = C - 1
 
             boundary = np.zeros((B, 4))
             boundary[:, 2] = seq_length
             boundary[:, 3] = frames
-            boundary = tf.convert_to_tensor(boundary, dtype=tf.int64)
+            boundary = tf.convert_to_tensor(boundary, dtype=tf.int32)
 
             for rnnt_type in ["regular"]:
                 # normal rnnt

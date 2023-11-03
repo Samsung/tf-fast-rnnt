@@ -27,15 +27,15 @@
 REGISTER_OP("FastRNNTLoss")
     .Input("px: float32")
     .Input("py: float32")
-    .Input("boundary: int64")
+    .Input("boundary: int32")
     .Input("return_grad: bool")
     .Output("ans: float32")
     .Output("px_grad: float32")
     .Output("py_grad: float32");
 
 REGISTER_OP("Cummin")
-    .Input("in: int64")
-    .Output("out: int64");
+    .Input("in: int32")
+    .Output("out: int32");
 
 namespace tf = tensorflow;
 
@@ -60,7 +60,7 @@ class FastRNNTOpBase : public tf::OpKernel {
 
         auto px_t = px->tensor<float, 3>();
         auto py_t = py->tensor<float, 3>();
-        auto boundary_t = boundary->matrix<int64_t>();
+        auto boundary_t = boundary->matrix<int32_t>();
         auto return_grad_t = return_grad->scalar<bool>();
 
         tf::Tensor p;
@@ -146,13 +146,13 @@ class CumminOpGPU : public tf::OpKernel {
 
         const int B = in->dim_size(0), S = in->dim_size(1);
 
-        auto in_t = in->tensor<int64_t, 2>();
+        auto in_t = in->tensor<int32_t, 2>();
 
         tf::Tensor* out = nullptr;
         OP_REQUIRES_OK(ctx, ctx->allocate_output("out", tf::TensorShape({B, S}), &out));
-        auto out_t = out->tensor<int64_t, 2>();
+        auto out_t = out->tensor<int32_t, 2>();
 
-        int status = tf_fast_rnnt::CumminCuda<int64_t>(in_t,
+        int status = tf_fast_rnnt::CumminCuda<int32_t>(in_t,
                               out_t,
                               stream);
         cudaStreamSynchronize(stream);                              

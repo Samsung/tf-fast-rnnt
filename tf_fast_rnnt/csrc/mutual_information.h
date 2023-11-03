@@ -113,13 +113,13 @@ FT_CUDA_HOSTDEV inline float LogAdd(float x, float y) {
                                    p[b,s,t-1] + py[b,s,t-1])
                ...     treating values with any -1 index as -infinity.
                .. if `boundary` is set, we start from p[b,s_begin,t_begin]=0.0.
-    @param boundary  If set, a tensor of shape [B][4] of type int64_t, which
+    @param boundary  If set, a tensor of shape [B][4] of type int32_t, which
                      contains, where for each batch element b, boundary[b]
                      equals [s_begin, t_begin, s_end, t_end]
                      which are the beginning and end (i.e. one-past-the-last)
                      of the x and y sequences that we should process.
                      Alternatively, may be a tensor of shape [0][0] and type
-                     int64_t; the elements will default to (0, 0, S, T).
+                     int32_t; the elements will default to (0, 0, S, T).
     @return A tensor `ans` of shape [B], where this function will set
                ans[b] = p[b][s_end][t_end],
                with s_end and t_end being (S, T) if `boundary` was specified,
@@ -135,7 +135,7 @@ template <typename scalar_t>
 int MutualInformationCuda(
     typename tf::TTypes<scalar_t, 3>::ConstTensor& px, // [B][S][T+1] if !modified, [B][S][T] if modified.
     typename tf::TTypes<scalar_t, 3>::ConstTensor& py, // [B][S+1][T]
-    typename tf::TTypes<int64_t>::ConstMatrix& boundary, // [B][4], int.
+    typename tf::TTypes<int32_t>::ConstMatrix& boundary, // [B][4], int.
     typename tf::TTypes<scalar_t, 3>::Tensor& p, 
     typename tf::TTypes<scalar_t>::Vec& ans,             //  [B][S+1][T+1]; an output
     cudaStream_t stream);                        
@@ -152,7 +152,7 @@ template <typename scalar_t>
 int MutualInformationBackwardCuda(
     typename tf::TTypes<scalar_t, 3>::ConstTensor& px, 
     typename tf::TTypes<scalar_t, 3>::ConstTensor& py, 
-    typename tf::TTypes<int64_t>::ConstMatrix& boundary,
+    typename tf::TTypes<int32_t>::ConstMatrix& boundary,
     typename tf::TTypes<scalar_t, 3>::Tensor& p, 
     typename tf::TTypes<scalar_t, 3>::Tensor& p_grad, 
     typename tf::TTypes<scalar_t, 3>::Tensor& px_grad, 

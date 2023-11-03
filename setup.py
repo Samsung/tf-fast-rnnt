@@ -62,7 +62,7 @@ class BuildExtension(build_ext):
                 "message.\n"
                 "You can ask for help by creating an issue on GitHub.\n"
                 "\nClick:\n"
-                "\thttps://github.com/danpovey/fast_rnnt/issues/new\n"  # noqa
+                "\thttps://github.com/Samsung/tf-fast-rnnt/issues/new\n"  # noqa
             )
         lib_so = glob.glob(f"{build_dir}/lib/*.so*")
 
