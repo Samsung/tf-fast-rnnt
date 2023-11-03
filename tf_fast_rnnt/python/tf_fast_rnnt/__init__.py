@@ -153,6 +153,7 @@ def cummin(x):
 
 @ops.RegisterGradient("FastRNNTLoss")
 def _RNNTLossGrad(op, *grads):
+    tf.assert_equal(op.inputs[3], True)  # set return_grad or training to True if you want to get gradients
     gradpx = op.outputs[1]
     gradpy = op.outputs[2]
     # NOTE since here we are batch first, cannot use _BroadcastMul
