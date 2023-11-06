@@ -6,7 +6,7 @@ execute_process(COMMAND python3 -c "import tensorflow as tf; print(' '.join(tf.s
 
 execute_process(COMMAND python3 -c "import tensorflow as tf; print(' '.join(tf.sysconfig.get_link_flags()), end='')" OUTPUT_VARIABLE Tensorflow_LINK_FLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-execute_process(COMMAND python3 -c "import tensorflow as tf; print(' '.join(tf.__version__), end='')" OUTPUT_VARIABLE Tensorflow_VERSION OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND python3 -c "import tensorflow as tf; print(tf.__version__, end='')" OUTPUT_VARIABLE Tensorflow_VERSION)
 
 # set the global CMAKE_CXX_FLAGS so that
 # optimized_transducer uses the same abi flag as tensorflow

@@ -9,9 +9,14 @@ to build this project"
   )
 endif()
 
-message(Tensorflow_VERSION="${Tensorflow_VERSION}")
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-if(Tensorflow_VERSION GREATER_EQUAL "2.10.0")
+include(tensorflow)
+
+message(STATUS "Tensorflow version: ${Tensorflow_VERSION}")
+
+if(Tensorflow_VERSION VERSION_GREATER_EQUAL "2.10.0")
   # sadly, cmake 3.17 and above is required to supprot tf 2.10
   cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "The C++ version to be used.")
@@ -136,9 +141,6 @@ if(FT_WITH_CUDA)
     set(CMAKE_CUDA_ARCHITECTURES "${COMPUTE_ARCH}-real;${COMPUTE_ARCH}-virtual;${CMAKE_CUDA_ARCHITECTURES}")
   endforeach()
 endif()
-
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 if(FT_BUILD_TESTS)
   enable_testing()
