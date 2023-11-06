@@ -17,7 +17,7 @@ We make `tf_fast_rnnt` a stand-alone project for tensorflow users.
 
 We first obtain pruning bounds for the RNN-T recursion using a simple joiner network that is just an addition of the encoder and decoder, then we use those pruning bounds to evaluate the full, non-linear joiner network.
 
-The picture below display the gradients (obtained by `rnnt_loss_simple` with `return_grad=true`) of lattice nodes, at each time frame, only a small set of nodes have a non-zero gradient, which justifies the pruned RNN-T loss, i.e., putting a limit on the number of symbols per frame.
+The picture below display the gradients (obtained by `rnnt_loss_simple` with `calc_gradients=true`) of lattice nodes, at each time frame, only a small set of nodes have a non-zero gradient, which justifies the pruned RNN-T loss, i.e., putting a limit on the number of symbols per frame.
 
 <img src="https://user-images.githubusercontent.com/5284924/158116784-4dcf1107-2b84-4c0c-90c3-cb4a02f027c9.png" width="900" height="250" />
 
@@ -85,13 +85,12 @@ Note: termination_symbol plays the role of blank in other RNN-T loss implementat
 ```python
 am = np.random.randn(B, T, C).astype('f')
 lm = np.random.randn(B, S + 1, C).astype('f')
-symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int64)
+symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int32)
 terminal_symbol = C - 1
 
 boundary = np.zeros((B, 4))
 boundary[:, 2] = seq_length
 boundary[:, 3] = frames
-boundary = tf.convert_to_tensor(boundary, dtype=tf.int64)
 
 simple_loss, (px_grad, py_grad) = tf_fast_rnnt.rnnt_loss_simple(
     lm=lm,
@@ -100,7 +99,7 @@ simple_loss, (px_grad, py_grad) = tf_fast_rnnt.rnnt_loss_simple(
     termination_symbol=terminal_symbol,
     boundary=boundary,
     rnnt_type=rnnt_type,
-    return_grad=True,
+    calc_gradients=True,
     reduction="none",
     delay_penalty=0.2,
 )
@@ -113,13 +112,12 @@ simple_loss, (px_grad, py_grad) = tf_fast_rnnt.rnnt_loss_simple(
 ```python
 am = np.random.randn(B, T, C).astype('f')
 lm = np.random.randn(B, S + 1, C).astype('f')
-symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int64)
+symbols = np.random.randint(0, C - 1, (B, S)).astype(np.int32)
 terminal_symbol = C - 1
 
 boundary = np.zeros((B, 4))
 boundary[:, 2] = seq_length
 boundary[:, 3] = frames
-boundary = tf.convert_to_tensor(boundary, dtype=tf.int64)
 
 simple_loss, (px_grad, py_grad) = tf_fast_rnnt.rnnt_loss_simple(
     lm=lm,
@@ -128,7 +126,7 @@ simple_loss, (px_grad, py_grad) = tf_fast_rnnt.rnnt_loss_simple(
     termination_symbol=terminal_symbol,
     boundary=boundary,
     rnnt_type=rnnt_type,
-    return_grad=True,
+    calc_gradients=True,
     reduction="none",
     delay_penalty=0.2,
 )

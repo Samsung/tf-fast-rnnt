@@ -28,7 +28,7 @@ REGISTER_OP("FastRNNTLoss")
     .Input("px: float32")
     .Input("py: float32")
     .Input("boundary: int32")
-    .Input("return_grad: bool")
+    .Input("calc_gradients: bool")
     .Output("ans: float32")
     .Output("px_grad: float32")
     .Output("py_grad: float32");
@@ -50,18 +50,18 @@ class FastRNNTOpBase : public tf::OpKernel {
         const tf::Tensor* px;
         const tf::Tensor* py;
         const tf::Tensor* boundary;
-        const tf::Tensor* return_grad;
+        const tf::Tensor* calc_gradients;
         OP_REQUIRES_OK(ctx, ctx->input("px", &px));
         OP_REQUIRES_OK(ctx, ctx->input("py", &py));
         OP_REQUIRES_OK(ctx, ctx->input("boundary", &boundary));
-        OP_REQUIRES_OK(ctx, ctx->input("return_grad", &return_grad));
+        OP_REQUIRES_OK(ctx, ctx->input("calc_gradients", &calc_gradients));
         auto stream = ctx->eigen_device<Eigen::GpuDevice>().stream();
         const int B = px->dim_size(0), S = px->dim_size(1), T = py->dim_size(2);
 
         auto px_t = px->tensor<float, 3>();
         auto py_t = py->tensor<float, 3>();
         auto boundary_t = boundary->matrix<int32_t>();
-        auto return_grad_t = return_grad->scalar<bool>();
+        auto calc_gradients_t = calc_gradients->scalar<bool>();
 
         tf::Tensor p;
         OP_REQUIRES_OK(ctx, ctx->allocate_temp(tf::DT_FLOAT, tf::TensorShape({B, S+1, T+1}), &p));
@@ -86,7 +86,7 @@ class FastRNNTOpBase : public tf::OpKernel {
         tf::Tensor* py_grad = nullptr;
         OP_REQUIRES_OK(ctx, ctx->allocate_output("py_grad", tf::TensorShape({B, S+1, T}), &py_grad));
 
-        if(return_grad_t()) {      
+        if(calc_gradients_t()) {
           tf::Tensor p_grad;
           OP_REQUIRES_OK(ctx, ctx->allocate_temp(tf::DT_FLOAT, tf::TensorShape({B, S+1, T+1}), &p_grad));
           auto p_grad_t = p_grad.tensor<float, 3>();
@@ -129,7 +129,7 @@ class FastRNNTOpGPU : public FastRNNTOpBase {
     }
 };
 REGISTER_KERNEL_BUILDER(Name("FastRNNTLoss").Device(::tensorflow::DEVICE_GPU)
-                        .HostMemory("return_grad"),
+                        .HostMemory("calc_gradients"),
                         FastRNNTOpGPU);
 
 class CumminOpGPU : public tf::OpKernel {

@@ -232,7 +232,7 @@ def rnnt_loss_simple(
     rnnt_type: str = "regular",
     delay_penalty: float = 0.0,
     reduction: Optional[str] = "mean",
-    return_grad: bool = False,
+    calc_gradients: bool = False,
 ) -> Union[tf.Tensor, Tuple[tf.Tensor, Tuple[tf.Tensor, tf.Tensor]]]:
     """A simple case of the RNN-T loss, where the 'joiner' network is just
     addition.
@@ -278,7 +278,7 @@ def rnnt_loss_simple(
         `mean`: apply `torch.mean` over the batches.
         `sum`: the output will be summed.
         Default: `mean`
-      return_grad:
+      calc_gradients:
         Whether to return grads of px and py, this grad standing for the
         occupation probability is the output of the backward with a
         `fake gradient`, the `fake gradient` is the same as the gradient you'd
@@ -286,10 +286,10 @@ def rnnt_loss_simple(
         loss here is the loss with reduction "none".
         This is useful to implement the pruned version of rnnt loss.
     Returns:
-       If return_grad is False, returns a tensor of shape (B,), containing the
+       If calc_gradients is False, returns a tensor of shape (B,), containing the
        total RNN-T loss values for each element of the batch if reduction equals
        to "none", otherwise a scalar with the reduction applied.
-       If return_grad is True, the grads of px and py, which is the output of
+       If calc_gradients is True, the grads of px and py, which is the output of
        backward with a `fake gradient`(see above), will be returned too. And the
        returned value will be a tuple like (loss, (px_grad, py_grad)).
     """
@@ -321,10 +321,10 @@ def rnnt_loss_simple(
         px += tf.cast(penalty, px.dtype)
 
     scores_and_grads = tf_fast_rnnt.mutual_information_recursion(
-        px=px, py=py, boundary=boundary, return_grad=return_grad
+        px=px, py=py, boundary=boundary, calc_gradients=calc_gradients
     )
    
-    negated_loss = scores_and_grads[0] if return_grad else scores_and_grads
+    negated_loss = scores_and_grads[0] if calc_gradients else scores_and_grads
     if reduction == "none":
         loss = -negated_loss
     elif reduction == "mean":
@@ -335,7 +335,7 @@ def rnnt_loss_simple(
         raise ValueError(
             f"reduction should be ('none' | 'mean' | 'sum'), given {reduction}"
         )
-    return (loss, scores_and_grads[1]) if return_grad else loss
+    return (loss, scores_and_grads[1]) if calc_gradients else loss
 
 @tf.function
 def get_rnnt_logprobs_joint(
@@ -460,7 +460,7 @@ def rnnt_loss(
     rnnt_type: str = "regular",
     delay_penalty: float = 0.0,
     reduction: Optional[str] = "mean",
-    return_grad: bool = False,
+    calc_gradients: bool = False,
 ) -> tf.Tensor:
     """A normal RNN-T loss, which uses a 'joiner' network output as input,
     i.e. a 4 dimensions tensor.
@@ -534,9 +534,9 @@ def rnnt_loss(
         px += tf.cast(penalty, px.dtype)
    
     scores_and_grads = tf_fast_rnnt.mutual_information_recursion(
-        px=px, py=py, boundary=boundary, return_grad=return_grad
+        px=px, py=py, boundary=boundary, calc_gradients=calc_gradients
     )
-    negated_loss = scores_and_grads[0] if return_grad else scores_and_grads
+    negated_loss = scores_and_grads[0] if calc_gradients else scores_and_grads
 	
     if reduction == "none":
         loss = -negated_loss
@@ -548,7 +548,7 @@ def rnnt_loss(
         raise ValueError(
             f"reduction should be ('none' | 'mean' | 'sum'), given {reduction}"
         )
-    return (loss, scores_and_grads[1]) if return_grad else loss
+    return (loss, scores_and_grads[1]) if calc_gradients else loss
 
 @tf.function
 def _monotonic_lower_bound(x: tf.Tensor) -> tf.Tensor:
@@ -1029,7 +1029,7 @@ def rnnt_loss_pruned(
     rnnt_type: str = "regular",
     delay_penalty: float = 0.0,
     reduction: Optional[str] = "mean",
-    training: bool = False,
+    calc_gradients: bool = False,
 ) -> tf.Tensor:
     """A RNN-T loss with pruning, which uses the output of a pruned 'joiner'
     network as input, i.e. a 4 dimensions tensor with shape (B, T, s_range, C),
@@ -1113,10 +1113,10 @@ def rnnt_loss_pruned(
         penalty = penalty * delay_penalty
         px += tf.cast(penalty, px.dtype)
     
-    if training:
-      negated_loss, _ = tf_fast_rnnt.mutual_information_recursion(px=px, py=py, boundary=boundary, return_grad=training)
+    if calc_gradients:
+      negated_loss, _ = tf_fast_rnnt.mutual_information_recursion(px=px, py=py, boundary=boundary, calc_gradients=calc_gradients)
     else:
-      negated_loss = tf_fast_rnnt.mutual_information_recursion(px=px, py=py, boundary=boundary, return_grad=training)
+      negated_loss = tf_fast_rnnt.mutual_information_recursion(px=px, py=py, boundary=boundary, calc_gradients=calc_gradients)
 
     if reduction == "none":
         return -negated_loss
@@ -1378,7 +1378,7 @@ def rnnt_loss_smoothed(
     rnnt_type: str = "regular",
     delay_penalty: float = 0.0,
     reduction: Optional[str] = "mean",
-    return_grad: bool = False,
+    calc_gradients: bool = False,
 ) -> Union[Tuple[tf.Tensor, Tuple[tf.Tensor, tf.Tensor]], tf.Tensor]:
     """A simple case of the RNN-T loss, where the 'joiner' network is just
     addition.
@@ -1431,7 +1431,7 @@ def rnnt_loss_smoothed(
         `mean`: apply `torch.mean` over the batches.
         `sum`: the output will be summed.
         Default: `mean`
-      return_grad:
+      calc_gradients:
         Whether to return grads of px and py, this grad standing for the
         occupation probability is the output of the backward with a
         `fake gradient`, the `fake gradient` is the same as the gradient you'd
@@ -1440,10 +1440,10 @@ def rnnt_loss_smoothed(
         This is useful to implement the pruned version of rnnt loss.
 
     Returns:
-       If return_grad is False, returns a tensor of shape (B,), containing the
+       If calc_gradients is False, returns a tensor of shape (B,), containing the
        total RNN-T loss values for each element of the batch if reduction equals
        to "none", otherwise a scalar with the reduction applied.
-       If return_grad is True, the grads of px and py, which is the output of
+       If calc_gradients is True, the grads of px and py, which is the output of
        backward with a `fake gradient`(see above), will be returned too. And the
        returned value will be a tuple like (loss, (px_grad, py_grad)).
     """
@@ -1478,9 +1478,9 @@ def rnnt_loss_smoothed(
         px += tf.cast(penalty, px.dtype)
 
     scores_and_grads = tf_fast_rnnt.mutual_information_recursion(
-        px=px, py=py, boundary=boundary, return_grad=return_grad
+        px=px, py=py, boundary=boundary, calc_gradients=calc_gradients
     )
-    negated_loss = scores_and_grads[0] if return_grad else scores_and_grads
+    negated_loss = scores_and_grads[0] if calc_gradients else scores_and_grads
     if reduction == "none":
         loss = -negated_loss
     elif reduction == "mean":
@@ -1491,4 +1491,4 @@ def rnnt_loss_smoothed(
         raise ValueError(
             f"reduction should be ('none' | 'mean' | 'sum'), given {reduction}"
         )
-    return (loss, scores_and_grads[1]) if return_grad else loss
+    return (loss, scores_and_grads[1]) if calc_gradients else loss

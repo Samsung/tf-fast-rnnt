@@ -43,7 +43,7 @@ def mutual_information_recursion(
     px: tf.Tensor,
     py: tf.Tensor,
     boundary: tf.Tensor,
-    return_grad: bool = False,
+    calc_gradients: bool = False,
 ) -> Union[Tuple[tf.Tensor, Tuple[tf.Tensor, tf.Tensor]], tf.Tensor]:
     """A recursion that is useful in computing mutual information between two
     sequences of real vectors, but may be useful more generally in
@@ -105,7 +105,7 @@ def mutual_information_recursion(
         ``y`` sequences respectively, and can be used if not all sequences are
         of the same length.
 
-      return_grad:
+      calc_gradients:
         Whether to return grads of ``px`` and ``py``, this grad standing for the
         occupation probability is the output of the backward with a
         ``fake gradient`` the ``fake gradient`` is the same as the gradient
@@ -145,15 +145,16 @@ def mutual_information_recursion(
             #assert 0 <= s_begin <= s_end <= S
             #assert 0 <= t_begin <= t_end <= T
     
-    ans, px_grad, py_grad = _tf_fast_rnnt.fast_rnnt_loss(px, py, boundary, return_grad)
-    return (ans, (px_grad, py_grad)) if return_grad else ans
+    ans, px_grad, py_grad = _tf_fast_rnnt.fast_rnnt_loss(px, py, boundary, calc_gradients)
+    return (ans, (px_grad, py_grad)) if calc_gradients else ans
 
 def cummin(x):
     return _tf_fast_rnnt.cummin(x)
 
 @ops.RegisterGradient("FastRNNTLoss")
 def _RNNTLossGrad(op, *grads):
-    tf.assert_equal(op.inputs[3], True)  # set return_grad or training to True if you want to get gradients
+    # tf.assert_equal causes 'Skipping loop optimization for Merge node with control input' warning
+    # tf.assert_equal(op.inputs[3], True)  # set calc_gradients or calc_gradients to True if you want to get gradients
     gradpx = op.outputs[1]
     gradpy = op.outputs[2]
     # NOTE since here we are batch first, cannot use _BroadcastMul

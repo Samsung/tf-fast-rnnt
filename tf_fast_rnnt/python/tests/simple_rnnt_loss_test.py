@@ -82,7 +82,7 @@ class TestRnntLoss(unittest.TestCase):
                         rnnt_type=rnnt_type,
                         reduction="mean",
                         delay_penalty=0.2,
-                        return_grad=True
+                        calc_gradients=True
                     )
 
                 grad = tape.gradient(rnnt_loss, logits)
@@ -100,7 +100,7 @@ class TestRnntLoss(unittest.TestCase):
                     lm_only_scale=0.1,
                     am_only_scale=0.2,
                     rnnt_type=rnnt_type,
-                    return_grad=True,
+                    calc_gradients=True,
                     reduction="none",
                     delay_penalty=0.2,
                 )
@@ -135,7 +135,7 @@ class TestRnntLoss(unittest.TestCase):
                             rnnt_type=rnnt_type,
                             reduction="mean",
                             delay_penalty=0.2,
-                            training=True
+                            calc_gradients=True
                         )
 
                     grad = tape.gradient(pruned_loss, logits)
@@ -194,7 +194,7 @@ class TestRnntLoss(unittest.TestCase):
                         rnnt_type=rnnt_type,
                         reduction="mean",
                         delay_penalty=0.2,
-                        return_grad=True
+                        calc_gradients=True
                     )
 
                 grad = tape.gradient(rnnt_loss, logits)
@@ -210,7 +210,7 @@ class TestRnntLoss(unittest.TestCase):
                     termination_symbol=terminal_symbol,
                     boundary=boundary,
                     rnnt_type=rnnt_type,
-                    return_grad=True,
+                    calc_gradients=True,
                     reduction="none",
                     delay_penalty=0.2,
                 )
@@ -245,7 +245,7 @@ class TestRnntLoss(unittest.TestCase):
                             rnnt_type=rnnt_type,
                             reduction="mean",
                             delay_penalty=0.2,
-                            training=True
+                            calc_gradients=True
                         )
 
                     grad = tape.gradient(pruned_loss, logits)
@@ -305,7 +305,7 @@ class TestRnntLoss(unittest.TestCase):
                         rnnt_type=rnnt_type,
                         reduction="mean",
                         delay_penalty=0.2,
-                        return_grad=True
+                        calc_gradients=True
                     )
 
                 grad = tape.gradient(rnnt_loss, logits)
@@ -322,7 +322,7 @@ class TestRnntLoss(unittest.TestCase):
                     lm_only_scale=0.1,
                     am_only_scale=0.2,
                     rnnt_type=rnnt_type,
-                    return_grad=True,
+                    calc_gradients=True,
                     reduction="none",
                     delay_penalty=0.2,
                 )
@@ -358,7 +358,7 @@ class TestRnntLoss(unittest.TestCase):
                             rnnt_type=rnnt_type,
                             reduction="mean",
                             delay_penalty=0.2,
-                            training=True
+                            calc_gradients=True
                         )
 
                     grad = tape.gradient(pruned_loss, logits)
