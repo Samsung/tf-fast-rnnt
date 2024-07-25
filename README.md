@@ -25,13 +25,7 @@ The picture below display the gradients (obtained by `rnnt_loss_simple` with `ca
 
 ## Installation
 
-You can install it via `pip`:
-
-```
-pip install tf_fast_rnnt
-```
-
-You can also install from source:
+You can install from source:
 
 ```
 cd tf_fast_rnnt
@@ -45,26 +39,6 @@ python3 -c "import tf_fast_rnnt; print(tf_fast_rnnt.__version__)"
 ```
 
 which should print the version of the installed `tf_fast_rnnt`, e.g., `1.2`.
-
-
-### How to display installation log ?
-
-Use
-
-```
-pip install --verbose tf_fast_rnnt
-```
-
-### How to reduce installation time ?
-
-Use
-
-```
-export FT_MAKE_ARGS="-j"
-pip install --verbose tf_fast_rnnt
-```
-
-It will pass `-j` to `make`.
 
 ### Which version of tensorflow is supported ?
 
